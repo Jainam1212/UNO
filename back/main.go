@@ -1,81 +1,63 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"net/http"
 
-	"example.com/models"
 	"example.com/routes"
+	"example.com/store"
 	"example.com/utils"
 	"github.com/fasthttp/router"
-	"github.com/gorilla/websocket"
+	"github.com/fasthttp/websocket"
 	"github.com/valyala/fasthttp"
 )
 
-var InitialCards []models.Card
+func main() {
+	store.InitialCards = utils.GenerateUnoDeck()
+	store.InitialCards = utils.ShuffleCards(store.InitialCards)
+	r := router.New()
 
-type Message struct {
-	Type string `json:"type"`
-	User string `json:"user"`
-	Text string `json:"text"`
+	routes.InitializeV1Routes(r)
+
+	r.GET("/playerHandler", handleConnections)
+	go handleChats()
+	go alertHandler()
+	go sendPlayerListInfo()
+	go inGamePlayersListHandler()
+	// go gameStateUpdateHandler()
+
+	fmt.Println("server listening on port 8080")
+	handler := CORS(r.Handler)
+	fasthttp.ListenAndServe(":8080", handler)
 }
 
-var clients = make(map[*websocket.Conn]bool)
-var broadcast = make(chan Message)
-
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true // allow all (for dev)
+var upgrader = websocket.FastHTTPUpgrader{
+	CheckOrigin: func(ctx *fasthttp.RequestCtx) bool {
+		return true
 	},
 }
 
-func main() {
-	InitialCards = utils.GenerateUnoDeck()
-	InitialCards = utils.ShuffleCards(InitialCards)
-	r := router.New()
-	routes.InitializeV1Routes(r)
-	http.HandleFunc("/ws", handleConnections)
-
-	go handleMessages()
-	fasthttp.ListenAndServe(":8080", r.Handler)
-}
-
-func handleConnections(w http.ResponseWriter, r *http.Request) {
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer ws.Close()
-
-	clients[ws] = true
-
-	broadcast <- Message{
-		Type: "join",
-		User: "New User",
-	}
-
-	for {
-		var msg Message
-		err := ws.ReadJSON(&msg)
-		if err != nil {
-			delete(clients, ws)
-			break
-		}
-
-		broadcast <- msg
-	}
-}
-
-func handleMessages() {
-	for {
-		msg := <-broadcast
-
-		for client := range clients {
-			err := client.WriteJSON(msg)
+func handleConnections(ctx *fasthttp.RequestCtx) {
+	err := upgrader.Upgrade(ctx, func(conn *websocket.Conn) {
+		addClient(conn)
+		log.Println("New client connected:")
+		for {
+			var msg interface{}
+			err := conn.ReadJSON(&msg)
 			if err != nil {
-				client.Close()
-				delete(clients, client)
+				log.Println("read error:", err)
+				removeClient(conn)
+				break
+			}
+			if data, ok := msg.(map[string]interface{}); ok {
+				channelHandler(data)
+			} else {
+				log.Println("Received non-object JSON, ignoring.")
 			}
 		}
+	})
+
+	if err != nil {
+		log.Println("upgrade error:", err)
 	}
 }

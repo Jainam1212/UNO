@@ -13,3 +13,7 @@ func JSONResponseWrite(ctx *fasthttp.RequestCtx, code int, obj interface{}) {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 	}
 }
+
+func GenerateSocketResponse() {
+
+}
