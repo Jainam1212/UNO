@@ -19,10 +19,11 @@ type GameInfo struct {
 	RoomId   int  `json:"roomId"`
 	TopCard  Card `json:"topCard"`
 	TurnInfo struct {
-		CurrentTurn   int
-		TurnFlow      bool
-		InGamePlayers []GamePlayersInfo
-		Winners       []GamePlayersInfo
+		CurrentTurn         int
+		CurrentTurnPosition int
+		TurnFlowIsReverse   bool
+		Players             []GamePlayersInfo
+		Winners             []GamePlayersInfo
 	}
 	MaxPlayers int          `json:"maxPlayersLimit"`
 	PileCards  []Card       `json:"cardStack"`
@@ -51,8 +52,9 @@ type ChannelSendMessage struct {
 }
 
 type ChannelSendAlert struct {
-	Type    string `json:"type"`
-	Message string `json:"alertMessage"`
+	Type     string `json:"type"`
+	Message  string `json:"alertMessage"`
+	PlayerId int    `json:"playerId"`
 }
 
 type ChannelSendUserInfo struct {

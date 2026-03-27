@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"example.com/routes"
+	"example.com/api"
+	"example.com/internals/utils"
 	"example.com/store"
-	"example.com/utils"
 	"github.com/fasthttp/router"
 	"github.com/fasthttp/websocket"
 	"github.com/valyala/fasthttp"
@@ -17,7 +17,7 @@ func main() {
 	store.InitialCards = utils.ShuffleCards(store.InitialCards)
 	r := router.New()
 
-	routes.InitializeV1Routes(r)
+	api.InitializeV1Routes(r)
 
 	r.GET("/playerHandler", handleConnections)
 	go handleChats()

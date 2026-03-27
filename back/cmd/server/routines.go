@@ -6,8 +6,7 @@ import (
 	"strconv"
 	"sync"
 
-	"example.com/models"
-	socketroutes "example.com/socketRoutes"
+	"example.com/internals/models"
 	"example.com/store"
 	"github.com/fasthttp/websocket"
 	"github.com/valyala/fasthttp"
@@ -44,18 +43,8 @@ func channelHandler(data map[string]interface{}) {
 			PlayerName: name,
 			Message:    text,
 		}
-	case "createGame":
-		playerId := int(data["playerId"].(float64))
-		gameId := int(data["gameId"].(float64))
-		maxPlayers := int(data["maxPlayers"].(float64))
-		playerName := data["playerName"].(string)
-		socketroutes.InitGame(playerId, gameId, playerName, maxPlayers)
-	case "joinGame":
-		playerId := int(data["playerId"].(float64))
-		gameId := int(data["gameId"].(float64))
+	case "startGame":
 
-		playerName := data["playerName"].(string)
-		socketroutes.JoinGame(playerId, gameId, playerName)
 	}
 }
 
@@ -78,7 +67,7 @@ func sendPlayerListInfo() {
 				Type    string   `json:"type"`
 				Players []string `json:"newPlayerIds"`
 			}{
-				Type:    "add_player_list",
+				Type:    "add_player_to_list",
 				Players: Msg,
 			}
 		}
@@ -172,8 +161,9 @@ func removeClient(conn *websocket.Conn) {
 	conn.Close()
 
 	alerts <- models.ChannelSendAlert{
-		Type:    "player_left",
-		Message: strconv.Itoa(client.PlayerId) + " left",
+		Type:     "player_left",
+		Message:  strconv.Itoa(client.PlayerId) + " left",
+		PlayerId: client.PlayerId,
 	}
 
 	store.GameStateMutex.Lock()

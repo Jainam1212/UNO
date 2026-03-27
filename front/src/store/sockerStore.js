@@ -36,6 +36,11 @@ export const gameStore = create((set, get) => ({
       ingamePlayers: [...state.ingamePlayers, data],
     })),
 
+  resetInGamePlayers: (playerId) =>
+    set((state) => ({
+      ingamePlayers: state.ingamePlayers.filter((p) => p.playerId !== playerId),
+    })),
+
   setGameStateCards: (cards) =>
     set((state) => ({
       gameState: {

@@ -3,7 +3,7 @@ package utils
 import (
 	"math/rand"
 
-	"example.com/models"
+	"example.com/internals/models"
 	"example.com/store"
 )
 
@@ -54,16 +54,11 @@ func InitGameInfoHandler() {
 	}
 
 	for _, clientDetails := range store.Clients {
-		Body := Body{
+		clientDetails.Send <- Body{
 			Type:        "game_init_info",
-			PlayerList:  store.GameState.TurnInfo.InGamePlayers,
+			PlayerList:  store.GameState.TurnInfo.Players,
 			CurrentTurn: store.GameState.TurnInfo.CurrentTurn,
 			CardsInHand: InHand[clientDetails.PlayerId],
-		}
-		err := clientDetails.Conn.WriteJSON(Body)
-		if err != nil {
-			clientDetails.Conn.Close()
-			delete(store.Clients, clientDetails.Conn)
 		}
 	}
 	store.GameStateMutex.Unlock()

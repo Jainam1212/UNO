@@ -2,12 +2,13 @@ import { useState } from "react";
 
 import "../styles/home.css";
 import { gameStore } from "../store/sockerStore";
-// import { customFetch } from "../utils/useFetch";
+import { customFetch } from "../utils/useFetch";
 import { useCookies } from "react-cookie";
 
 export const Home = () => {
   const [page, setPage] = useState("home"); // home | room
   const [modal, setModal] = useState(null); // null | create | join
+  const [role, setRole] = useState("");
   const [chatInput, setChatInput] = useState("");
 
   const [playerName, setPlayerName] = useState("");
@@ -31,19 +32,13 @@ export const Home = () => {
     if (!pid) {
       return;
     }
-    socketMessenger({
-      messageType: "createGame",
+    customFetch("http://192.168.1.6:8080/goapi/v1/createGame", "post", {
       playerId: Number(pid),
       gameId: Number(gameId),
-      playerName: playerName,
+      playerName,
       maxPlayers: Number(maxPlayers),
     });
-    // customFetch("http://localhost:8080/goapi/v1/createGame", "post", {
-    //   playerId: Number(pid),
-    //   gameId: Number(gameId),
-    //   playerName,
-    //   maxPlayers: Number(maxPlayers),
-    // });
+    setRole("owner");
   };
   const joinRoom = () => {
     setModal(null);
@@ -52,11 +47,24 @@ export const Home = () => {
     if (!pid) {
       return;
     }
-    socketMessenger({
-      messageType: "joinGame",
+    customFetch("http://192.168.1.6:8080/goapi/v1/joinGame", "post", {
       playerId: Number(pid),
       gameId: Number(joinGameId),
       playerName: joinPlayerName,
+    });
+    setRole("player");
+  };
+
+  const leaveGame = () => {
+    setModal(null);
+    setPage("home");
+    const pid = cookies["userinfo-cookie"];
+    if (!pid) {
+      return;
+    }
+    customFetch("http://192.168.1.6:8080/goapi/v1/leaveGame", "post", {
+      playerId: Number(pid),
+      gameId: Number(joinGameId),
     });
   };
 
@@ -187,8 +195,21 @@ export const Home = () => {
                 </div>
 
                 <div className="room-actions">
-                  <button className="btn-start">Start Game</button>
-                  <button className="btn-leave" onClick={() => setPage("home")}>
+                  <button
+                    className="btn-start"
+                    disabled={role !== "owner"}
+                    style={{
+                      cursor: role !== "owner" ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Start Game
+                  </button>
+                  <button
+                    className="btn-leave"
+                    onClick={() => {
+                      leaveGame();
+                    }}
+                  >
                     Leave Room
                   </button>
                 </div>
