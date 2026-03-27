@@ -9,10 +9,11 @@ function App() {
   const addMessage = gameStore((s) => s.addMessage);
   const addPlayer = gameStore((s) => s.setPlayers);
   const addInGamePlayer = gameStore((s) => s.setInGamePlayers);
+  // const resetInGamePlayer = gameStore((s) => s.resetInGamePlayers);
   const [, setCookie] = useCookies(["userinfo-cookie"]);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://192.168.1.23:8080/playerHandler");
+    const ws = new WebSocket("ws://192.168.1.6:8080/playerHandler");
 
     ws.onopen = () => {
       console.log("Connected");
@@ -37,9 +38,16 @@ function App() {
             playerMessage: data.playerMessage,
           });
           break;
-        case "add_player_list":
+        case "add_player_to_list":
           addPlayer(data.newPlayerIds);
           break;
+        // case "game_init_info":
+        //   console.log(data);
+        //   break;
+        // case "player_left":
+        //   console.log(data);
+        //   resetInGamePlayer(data.playerId);
+        //   break;
 
         default:
           break;

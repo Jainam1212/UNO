@@ -3,7 +3,7 @@ package store
 import (
 	"sync"
 
-	"example.com/models"
+	"example.com/internals/models"
 	"github.com/fasthttp/websocket"
 )
 

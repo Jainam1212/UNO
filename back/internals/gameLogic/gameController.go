@@ -1,12 +1,12 @@
-package controllers
+package gamelogic
 
 import (
 	"encoding/json"
 	"fmt"
 
-	"example.com/models"
+	"example.com/internals/models"
+	"example.com/internals/utils"
 	"example.com/store"
-	"example.com/utils"
 	"github.com/fasthttp/websocket"
 	"github.com/valyala/fasthttp"
 )
@@ -47,10 +47,11 @@ func InitGame(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	store.GameStateMutex.Lock()
+	fmt.Println("tryin to create game", data)
 	defer store.GameStateMutex.Unlock()
 	store.GameState.RoomId = data.GameId
 	store.GameState.MaxPlayers = data.MaxPlayers
-	store.GameState.TurnInfo.TurnFlow = true
+	store.GameState.TurnInfo.TurnFlowIsReverse = false
 	store.GameState.PileCards = utils.ShuffleCards(utils.GenerateUnoDeck())
 	store.GameState.Players = append(store.GameState.Players, models.PlayerInfo{Pid: data.PlayerId, Name: data.PlayerName, Role: "owner", CardsInHand: []models.Card{}})
 
@@ -68,7 +69,6 @@ func InitGame(ctx *fasthttp.RequestCtx) {
 		},
 		PlayerRole: "owner",
 	}
-	fmt.Println("initing game", player)
 	store.InGamePlayersList <- []models.InGamePlayersInfo{player}
 	store.Broadcast <- models.ChannelSendMessage{
 		Type:       "players_chat",
@@ -82,7 +82,6 @@ func JoinGame(ctx *fasthttp.RequestCtx) {
 		ctx.Error("Method not allowed", fasthttp.StatusMethodNotAllowed)
 		return
 	}
-	fmt.Println("JOINING THE GAME")
 	var data struct {
 		PlayerId   int    `json:"playerId"`
 		GameId     int    `json:"gameId"`
@@ -146,6 +145,17 @@ func StartGame(ctx *fasthttp.RequestCtx) {
 	}
 	var PlayerList []models.GamePlayersInfo
 	store.GameStateMutex.Lock()
+	if len(store.GameState.Players) <= 1 {
+		store.GameStateMutex.Unlock()
+		utils.JSONResponseWrite(ctx, fasthttp.StatusBadRequest, struct {
+			Status  string
+			Message string
+		}{
+			Status:  "fail",
+			Message: "no enough players",
+		})
+		return
+	}
 	for _, v := range store.GameState.Players {
 		PlayerList = append(PlayerList, models.GamePlayersInfo{
 			PlayerName: v.Name,
@@ -155,9 +165,10 @@ func StartGame(ctx *fasthttp.RequestCtx) {
 		v.CardsInHand = subCards
 		store.GameState.PileCards = store.GameState.PileCards[7:]
 	}
-	store.GameState.TurnInfo.InGamePlayers = PlayerList
+	store.GameState.TurnInfo.Players = PlayerList
 	store.GameState.TurnInfo.Winners = []models.GamePlayersInfo{}
-	store.GameState.TurnInfo.CurrentTurn = store.GameState.Players[0].Pid
+	store.GameState.TurnInfo.CurrentTurnPosition = 0
+	store.GameState.TurnInfo.CurrentTurn = store.GameState.TurnInfo.Players[0].PlayerId
 	store.GameStateMutex.Unlock()
 	utils.InitGameInfoHandler()
 }
@@ -195,11 +206,12 @@ func LeaveGame(ctx *fasthttp.RequestCtx) {
 	store.GameStateMutex.Lock()
 
 	index := -1
-
+	// var playerToLeave models.PlayerInfo
 	for i, v := range store.GameState.Players {
 		if v.Pid == data.PlayerId {
 			index = i
 		}
+		// playerjToLeave = v
 	}
 
 	if index == -1 {
@@ -214,6 +226,9 @@ func LeaveGame(ctx *fasthttp.RequestCtx) {
 	}
 
 	store.GameState.Players = append(store.GameState.Players[:index], store.GameState.Players[index+1:]...)
+	// if  {
+
+	// }
 	store.GameStateMutex.Unlock()
 
 	store.Mu.Lock()

@@ -1,8 +1,8 @@
-package routes
+package api
 
 import (
-	"example.com/controllers"
-	"example.com/utils"
+	"example.com/internals/gamelogic"
+	"example.com/internals/utils"
 	"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 )
@@ -20,8 +20,9 @@ func InitializeV1Routes(r *router.Router) {
 			}
 			utils.JSONResponseWrite(ctx, 200, response)
 		})
-		v1.POST("/createGame", controllers.InitGame)
-		v1.POST("/joinGame", controllers.JoinGame)
+		v1.POST("/createGame", gamelogic.InitGame)
+		v1.POST("/joinGame", gamelogic.JoinGame)
+		v1.POST("/leaveGame", gamelogic.LeaveGame)
 
 		v1.PUT("/updateCards", func(ctx *fasthttp.RequestCtx) {
 
